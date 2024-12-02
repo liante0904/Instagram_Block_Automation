@@ -24,7 +24,7 @@ Instructions
 # Modules
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
@@ -56,13 +56,17 @@ Buffer_Wait_Lower = Config["Buffer_Wait_Lower"]
 Buffer_Wait_Upper = Config["Buffer_Wait_Upper"]
 
 DRIVER = "./Driver/chromedriver.exe"
-BRAVE = r"C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe"
-# CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 LINK = "http://www.instagram.com"
 PROFILE = "https://www.instagram.com/{0}"
 
-USERNAME = str(input("USERNAME: "))
-PASSWORD = getpass("PASSWORD: ", '*')
+# Vars
+with open('res/login.json', 'r') as File_Obj:
+    login_json = File_Obj.read()
+    
+login = loads(login_json)
+
+USERNAME = login["ID"]
+PASSWORD = login["PASSWORD"]
 
 Random_Wait_Times = [x/1000 for x in range(2000, 6001)]
 
@@ -79,26 +83,21 @@ Counter = 0
 WaitTime = randint(Buffer_Wait_Lower, Buffer_Wait_Upper)
 
 # XPATH Vars
-with open('res\\xpath.json', 'r') as File_Obj:
+with open('./res/xpath.json', 'r') as File_Obj:
     XPATHS_Json = File_Obj.read()
 
 XPATHS = loads(XPATHS_Json)
 
 Search_Button_XPATH = XPATHS["Search_Button_XPATH"]
-Three_Dots_XPATH = XPATHS["Three_Dots_XPATH"]
-Block_Button_XPATH = XPATHS["Block_Button_XPATH"]
 Follow_Button_XPATH = XPATHS["Follow_Button_XPATH"]
-Block_Confirm_XPATH = XPATHS["Block_Confirm_XPATH"]
 
-# Chrome Options
-Chrome_Options = webdriver.ChromeOptions()
-Chrome_Options.add_argument("--incognito")
-Chrome_Options.add_argument("--enable-chrome-browser-cloud-management")
-Chrome_Options.binary_location = BRAVE
+
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--no-sandbox")
 
 # Initialisation
-service = Service(executable_path=DRIVER)
-Browser = webdriver.Chrome(service=service, options=Chrome_Options)
+#service = Service(executable_path=DRIVER)
+Browser = webdriver.Chrome(options=chrome_options)
 
 # Functions
 def New_Blocked_List(List):
@@ -132,32 +131,29 @@ def Block(USER_LINK):
     Browser.get(USER_LINK)
     
     try:
-        WebDriverWait(Browser, Increased_Wait).until(EC.presence_of_element_located((By.XPATH, Three_Dots_XPATH)))
-        RandWait()
-        Follow_Button = Browser.find_element(By.XPATH, Follow_Button_XPATH)
+        
+        # 1. 특정 좌표 (100, 50) 클릭
+        actions = ActionChains(Browser)
+        actions.move_by_offset(100, 50).click().perform()  # (0, 0) 클릭
+        sleep(1)  # 지연 시간 추가 (필요시)   
+        # 2. 탭(Tab) 키 6번 보내기
+        for _ in range(6):
+            actions.send_keys(Keys.TAB).perform()
+            sleep(0.2)  # 지연 시간 추가 (필요시)
+
+        # 3. 엔터(Enter) 키 보내기
+        sleep(1)  # 지연 시간 추가 (필요시)   
+        actions.send_keys(Keys.ENTER).perform()  
+        
+        sleep(1)  # 지연 시간 추가 (필요시)   
+        actions.send_keys(Keys.ENTER).perform()  
+        
+        
     except Exception as Error:
+        print(Error)
         return "404"
     
-    if str(Follow_Button.text) == "Unblock":
-        RandWait()
-        return None
-    
-    RandWait()
-    
-    Three_Dots = Browser.find_element(By.XPATH, Three_Dots_XPATH)
-    Three_Dots.click()
-    WebDriverWait(Browser, Standard_Wait).until(EC.presence_of_element_located((By.XPATH, Block_Button_XPATH)))
-    RandWait()
-    
-    Block_Button = Browser.find_element(By.XPATH, Block_Button_XPATH)
-    Block_Button.click()
-    WebDriverWait(Browser, Standard_Wait).until(EC.presence_of_element_located((By.XPATH, Block_Confirm_XPATH)))
-    RandWait()
-    
-    Block_Confirm = Browser.find_element(By.XPATH, Block_Confirm_XPATH)
-    Block_Confirm.click()
-    sleep(4)
-        
+       
     return True
 
 # Vars
@@ -179,7 +175,11 @@ Password_Input_Element.send_keys(PASSWORD)
 RandWait()
 
 Password_Input_Element.send_keys(Keys.ENTER)
-WebDriverWait(Browser, Standard_Wait).until(EC.presence_of_element_located((By.XPATH, Search_Button_XPATH)))
+
+RandWait()
+RandWait()
+
+Browser.get(LINK)
 RandWait()
 
 print("Press 'Ctrl + c' to stop")
